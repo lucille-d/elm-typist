@@ -16,7 +16,7 @@ main =
 
 
 type alias Model =
-    { textToType : String }
+    { textToType : String, remainingLetters : String, score : Int }
 
 
 init : ( Model, Cmd Msg )
@@ -26,7 +26,7 @@ init =
 
 model : Model
 model =
-    { textToType = "cornichon" }
+    { textToType = "cornichon", remainingLetters = "cornichon", score = 0 }
 
 
 type Msg
@@ -42,19 +42,19 @@ update msg model =
                     String.fromChar (Char.fromCode code)
 
                 firstLetter =
-                    String.left 1 model.textToType
+                    String.left 1 model.remainingLetters
             in
                 if String.toUpper typedLetter == String.toUpper firstLetter then
                     let
-                        remainingLetters =
-                            String.dropLeft 1 model.textToType
+                        newRemainingLetters =
+                            String.dropLeft 1 model.remainingLetters
                     in
-                        if String.length remainingLetters == 0 then
-                            ( { model | textToType = "FINI" }, Cmd.none )
+                        if String.length newRemainingLetters == 0 then
+                            ( { model | remainingLetters = model.textToType, score = model.score + 10 }, Cmd.none )
                         else
-                            ( { model | textToType = remainingLetters }, Cmd.none )
+                            ( { model | remainingLetters = newRemainingLetters, score = model.score + 1 }, Cmd.none )
                 else
-                    ( model, Cmd.none )
+                    ( { model | score = model.score - 3 }, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -65,4 +65,7 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [] [ text model.textToType ]
+    div []
+        [ div [] [ text model.remainingLetters ]
+        , div [] [ text (toString model.score) ]
+        ]
