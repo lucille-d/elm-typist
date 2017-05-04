@@ -4,6 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Keyboard exposing (..)
+import Time exposing (..)
 import Char exposing (toCode, fromCode)
 
 
@@ -37,6 +38,7 @@ type alias Model =
     , textToType : String
     , typedLetters : String
     , score : Int
+    , lastAction : String
     }
 
 
@@ -52,17 +54,19 @@ model =
     , textToType = ""
     , typedLetters = ""
     , score = 0
+    , lastAction = ""
     }
 
 
 type Msg
     = KeyMsg Keyboard.KeyCode
     | Start
+    | Tick Time
 
 
 reinitWordList : Model -> Model
 reinitWordList model =
-    { model | words = defaultWords }
+    { model | words = defaultWords, lastAction = "" }
 
 
 loadNexttWord : Model -> Model
@@ -99,16 +103,17 @@ processTypedLetter code model =
                     String.dropLeft 1 model.textToType
             in
                 if String.length remainingLetters == 0 then
-                    loadNexttWord model
+                    loadNexttWord { model | lastAction = "success" }
                         |> score 10
                 else
                     score 1
                         { model
                             | typedLetters = model.typedLetters ++ firstLetter
                             , textToType = remainingLetters
+                            , lastAction = "success"
                         }
         else
-            score -3 model
+            score -3 { model | lastAction = "fail" }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -124,11 +129,18 @@ update msg model =
             , Cmd.none
             )
 
+        Tick newTime ->
+            ( { model | lastAction = "" }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ Keyboard.downs KeyMsg ]
+    if model.lastAction /= "" then
+        Sub.batch
+            [ Keyboard.downs KeyMsg, Time.every (300 * millisecond) Tick ]
+    else
+        Sub.batch
+            [ Keyboard.downs KeyMsg ]
 
 
 view : Model -> Html Msg
@@ -137,7 +149,7 @@ view model =
         [ div [ class "score" ] [ text (toString model.score) ]
         , div [ class "text" ]
             [ span [ class "typed" ] [ text model.typedLetters ]
-            , span [ class "remaining" ] [ text model.textToType ]
+            , span [ class "remaining", class model.lastAction ] [ text model.textToType ]
             ]
         , button [ onClick Start ] [ text "START" ]
         , Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href "style.css" ] []
