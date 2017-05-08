@@ -28,29 +28,3 @@
     text-align: right;
     padding: 10px;
 }
-
-.success {
-    animation: .3s linear 0s 1 blink-green;
-}
-
-@keyframes blink-green {
-    from {
-        color: lightgreen;
-    }
-    to {
-        color: #0A374E;
-    }
-}
-
-.fail {
-    animation: .3s linear 0s 1 blink-red;
-}
-
-@keyframes blink-red {
-    from {
-        color: red;
-    }
-    to {
-        color: #0A374E;
-    }
-}

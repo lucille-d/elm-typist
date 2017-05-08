@@ -17,10 +17,9 @@ defaultWords =
     [ "toto", "cornichon", "machin" ]
 
 
-
--- alphabet : WordList
--- alphabet =
---     [ "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" ]
+alphabet : WordList
+alphabet =
+    [ "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" ]
 
 
 main =
@@ -38,7 +37,7 @@ type alias Model =
     , textToType : String
     , typedLetters : String
     , score : Int
-    , lastAction : String
+    , currentMode : String
     }
 
 
@@ -54,25 +53,27 @@ model =
     , textToType = ""
     , typedLetters = ""
     , score = 0
-    , lastAction = ""
+    , currentMode = ""
     }
 
 
 type Msg
     = KeyMsg Keyboard.KeyCode
-    | Start
-    | Tick Time
+    | Start String
 
 
 reinitWordList : Model -> Model
 reinitWordList model =
-    { model | words = defaultWords, lastAction = "" }
+    if model.currentMode == "words" then
+        { model | words = defaultWords }
+    else
+        { model | words = alphabet }
 
 
-loadNexttWord : Model -> Model
-loadNexttWord model =
+loadNextWord : Model -> Model
+loadNextWord model =
     if List.length model.words == 0 then
-        loadNexttWord (reinitWordList model)
+        { model | currentMode = "" }
     else
         { model
             | typedLetters = ""
@@ -103,24 +104,30 @@ processTypedLetter code model =
                     String.dropLeft 1 model.textToType
             in
                 if String.length remainingLetters == 0 then
-                    loadNexttWord { model | lastAction = "success" }
+                    loadNextWord model
                         |> score 10
                 else
                     score 1
                         { model
                             | typedLetters = model.typedLetters ++ firstLetter
                             , textToType = remainingLetters
-                            , lastAction = "success"
                         }
         else
-            score -3 { model | lastAction = "fail" }
+            score -3 model
+
+
+changeMode : String -> Model -> Model
+changeMode mode model =
+    { model | currentMode = mode }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Start ->
-            ( loadNexttWord (reinitWordList model)
+        Start mode ->
+            ( changeMode mode model
+                |> reinitWordList
+                |> loadNextWord
             , Cmd.none
             )
 
@@ -129,28 +136,53 @@ update msg model =
             , Cmd.none
             )
 
-        Tick newTime ->
-            ( { model | lastAction = "" }, Cmd.none )
-
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if model.lastAction /= "" then
-        Sub.batch
-            [ Keyboard.downs KeyMsg, Time.every (300 * millisecond) Tick ]
-    else
-        Sub.batch
-            [ Keyboard.downs KeyMsg ]
+    Sub.batch
+        [ Keyboard.downs KeyMsg ]
 
 
 view : Model -> Html Msg
 view model =
     div [ class "app" ]
-        [ div [ class "score" ] [ text (toString model.score) ]
-        , div [ class "text" ]
-            [ span [ class "typed" ] [ text model.typedLetters ]
-            , span [ class "remaining", class model.lastAction ] [ text model.textToType ]
-            ]
-        , button [ onClick Start ] [ text "START" ]
-        , Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href "style.css" ] []
+        [ menuButtons model
+        , scoreDiv model
+        , gameDiv model
+        , styleSheet model
         ]
+
+
+menuButtons : Model -> Html Msg
+menuButtons model =
+    if model.currentMode == "" then
+        div []
+            [ button [ onClick (Start "words") ] [ text "Start Words" ]
+            , button [ onClick (Start "alphabet") ] [ text "Start Alphabet" ]
+            ]
+    else
+        div [] []
+
+
+scoreDiv : Model -> Html Msg
+scoreDiv model =
+    if model.currentMode /= "" then
+        div [ class "score" ] [ text (toString model.score) ]
+    else
+        div [] []
+
+
+gameDiv : Model -> Html Msg
+gameDiv model =
+    if model.currentMode /= "" then
+        div [ class "text" ]
+            [ span [ class "typed" ] [ text model.typedLetters ]
+            , span [ class "remaining" ] [ text model.textToType ]
+            ]
+    else
+        div [] []
+
+
+styleSheet : Model -> Html Msg
+styleSheet model =
+    Html.node "link" [ Html.Attributes.rel "stylesheet", Html.Attributes.href "style.css" ] []
